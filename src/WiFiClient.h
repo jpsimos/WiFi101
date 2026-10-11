@@ -54,7 +54,10 @@ public:
 	bool operator!=(const WiFiClient &other) const;
 
 	using Print::write;
-
+	using Print::printf;
+	using Print::print;
+	using Print::println;
+	
 	virtual IPAddress remoteIP();
 	virtual uint16_t remotePort();
 

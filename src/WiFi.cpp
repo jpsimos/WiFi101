@@ -298,6 +298,12 @@ int WiFiClass::init()
 		return ret;
 	}
 
+	// Set North America as the current region.	
+	if(M2M_SUCCESS != m2m_wifi_set_scan_region(NORTH_AMERICA))
+	{
+		while(1){}
+	}
+
 	// Initialize socket API and register socket callback:
 	socketInit();
 	registerSocketCallback(socket_cb, resolve_cb);
@@ -837,7 +843,7 @@ int32_t WiFiClass::RSSI()
 	return rssi;
 }
 
-int8_t WiFiClass::scanNetworks()
+int8_t WiFiClass::scanNetworks(const bool passive)
 {
 	wl_status_t tmp = _status;
 
@@ -846,14 +852,29 @@ int8_t WiFiClass::scanNetworks()
 	}
 
 	// Start scan:
-	if (m2m_wifi_request_scan(M2M_WIFI_CH_ALL) < 0) {
-		return 0;
+	if(passive)
+	{
+		tstrM2MScanOption scanOptions;
+		scanOptions.u8NumOfSlot = 2;
+		scanOptions.u8SlotTime = 10;
+		scanOptions.u8ProbesPerSlot = M2M_SCAN_DEFAULT_NUM_PROBE;
+		scanOptions.s8RssiThresh = -40;
+		//m2m_wifi_set_scan_options(&scanOptions);
+		if (m2m_wifi_request_scan_passive(M2M_WIFI_CH_ALL, 0) < 0) {
+			return 0;
+		}
+	}
+	else
+	{
+		if (m2m_wifi_request_scan(M2M_WIFI_CH_ALL) < 0) {
+			return 0;
+		}
 	}
 
 	// Wait for scan result or timeout:
 	_status = WL_IDLE_STATUS;
 	unsigned long start = millis();
-	while (!(_status & WL_SCAN_COMPLETED) && millis() - start < 5000) {
+	while (!(_status & WL_SCAN_COMPLETED) && (millis() - start) < 10000) {
 		m2m_wifi_handle_events(NULL);
 	}
 	_status = tmp;
