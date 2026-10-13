@@ -30,19 +30,20 @@ class WiFiServer : public Server {
 private:
 	SOCKET _socket;
 	uint16_t _port;
+	uint8_t _status;
 	uint8_t begin(uint8_t opt);
 
 public:
 	WiFiServer(uint16_t);
 	WiFiClient available(uint8_t* status = NULL);
 	void begin();
+	void stop();
 	uint8_t beginSSL();
 	virtual size_t write(uint8_t);
 	virtual size_t write(const uint8_t *buf, size_t size);
-	uint8_t status();
+	uint8_t status() const;
 
 	using Print::write;
-
 };
 
 #endif /* WIFISERVER_H */

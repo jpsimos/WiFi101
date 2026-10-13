@@ -23,7 +23,8 @@
 #include "WiFiServer.h"
 
 WiFiServer::WiFiServer(uint16_t port) :
-	_socket(-1)
+	_socket(-1),
+	_status(0)
 {
 	_port = port;
 }
@@ -50,10 +51,12 @@ uint8_t WiFiServer::begin(uint8_t opt)
 	if (_socket != -1 && WiFiSocket.listening(_socket)) {
 		WiFiSocket.close(_socket);
 		_socket = -1;
+		_status = 0;
 	}
 
 	// Open TCP server socket.
 	if ((_socket = WiFiSocket.create(AF_INET, SOCK_STREAM, opt)) < 0) {
+		_status = 0;
 		return 0;
 	}
 
@@ -61,6 +64,7 @@ uint8_t WiFiServer::begin(uint8_t opt)
 	if (!WiFiSocket.bind(_socket, (struct sockaddr *)&addr, sizeof(struct sockaddr_in))) {
 		WiFiSocket.close(_socket);
 		_socket = -1;
+		_status = 0;
 		return 0;
 	}
 
@@ -68,15 +72,27 @@ uint8_t WiFiServer::begin(uint8_t opt)
 	if (!WiFiSocket.listen(_socket, 0)) {
 		WiFiSocket.close(_socket);
 		_socket = -1;
+		_status = 0;
 		return 0;
 	}
+	
+	_status = 1;
 
 	return 1;
 }
 
+void WiFiServer::stop()
+{
+	if (_socket != -1 && WiFiSocket.listening(_socket)) {
+		WiFiSocket.close(_socket);
+		_socket = -1;
+	}
+	_status = 0;
+}
+
 WiFiClient WiFiServer::available(uint8_t* status)
 {
-	if (status != NULL) {
+	if (status) {
 		*status = 0;
 	}
 
@@ -88,11 +104,19 @@ WiFiClient WiFiServer::available(uint8_t* status)
 		SOCKET child = WiFiSocket.accepted(_socket);
 
 		if (child > -1) {
+			if(status)
+			{
+				*status = 1;
+			}
 			return WiFiClient(child);
 		}
 
 		for (SOCKET s = 0; s < TCP_SOCK_MAX; s++) {
 			if (WiFiSocket.hasParent(_socket, s) && WiFiSocket.available(s)) {
+				if(status)
+				{
+					*status = 1;
+				}
 				return WiFiClient(s);
 			}
 		}
@@ -101,9 +125,8 @@ WiFiClient WiFiServer::available(uint8_t* status)
 	return WiFiClient();
 }
 
-uint8_t WiFiServer::status() {
-	// Deprecated.
-	return 0;
+uint8_t WiFiServer::status() const{
+	return _status;
 }
 
 size_t WiFiServer::write(uint8_t b)
